@@ -3,6 +3,7 @@ using namespace std;
 #include "Connection.hpp"
 #include "CommonConnectionPool.hpp"
 #include<string>
+#include<sstream>
 
 int main()
 {
