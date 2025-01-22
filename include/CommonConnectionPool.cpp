@@ -85,7 +85,32 @@ bool ConnectionPool::loadConfigFile()
 
 shared_ptr<Connection>ConnectionPool::getConnection() //从连接池中获取一个可用连接
 {
+    unique_lock<mutex> lock(_queMutex);
+    if(_connectionQue.empty())
+    {
+        //sleep
+        if(cv_status::timeout == _cv.wait_for(lock, chrono::milliseconds(_connectionTimeout)))
+        {
+            if(_connectionQue.empty())
+            {
+                LOG("get connection timeout");
+                return nullptr;
+            }
+        }
 
+    }
+    /*
+    shared_ptr智能指针析构会把connection资源delete
+    需要自定义释放的方式 这样子就不会delete了
+    */
+    shared_ptr<Connection> conn(_connectionQue.front(),[&](Connection* pcon)
+    {
+        unique_lock<mutex> lock(_queMutex);
+        _connectionQue.push(pcon);
+    });
+    _connectionQue.pop();
+    _cv.notify_all(); //通知生产者线程
+    return conn;
 }
 
 
@@ -107,6 +132,6 @@ void ConnectionPool::produceConnectionTask()
             _connectionQue.push(conn);
             _connectionCnt++;
         }
-        cv.notify_all(); //唤醒一个消费者线程
+        _cv.notify_all(); //唤醒一个消费者线程
     }
 }
