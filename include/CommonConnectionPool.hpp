@@ -29,6 +29,9 @@ class ConnectionPool
     //运行独立的线程负责新连接
     void produceConnectionTask();
 
+	// 扫描超过maxIdleTime时间的空闲连接，进行对于的连接回收
+	void scannerConnectionTask();
+
     private:
     string _ip;
     unsigned short _port;

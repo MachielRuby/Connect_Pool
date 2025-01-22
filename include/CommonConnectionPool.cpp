@@ -13,14 +13,18 @@ ConnectionPool::ConnectionPool()//1 私化构造函数
     for (int i = 0; i < _initSize; ++i) {
         Connection* p = new Connection();
         p->connect(_ip, _port, _username, _password, _dbname);
+        p->refreshAliveTime(); //刷新一下开始空闲的起始时间
         _connectionQue.push(p);
         _connectionCnt++;
     }
 
-    //生产者线程
-    thread produce(std::bind(&ConnectionPool::produceConnectionTask, this));
+	// 启动一个新的线程，作为连接的生产者 linux thread => pthread_create
+	thread produce(std::bind(&ConnectionPool::produceConnectionTask, this));
+	produce.detach();
 
-
+	// 启动一个新的定时线程，扫描超过maxIdleTime时间的空闲连接，进行对于的连接回收
+	thread scanner(std::bind(&ConnectionPool::scannerConnectionTask, this));
+	scanner.detach();
 }
 
 ConnectionPool* ConnectionPool::getInstance() //2 提供获取单例对象的接口
@@ -129,9 +133,38 @@ void ConnectionPool::produceConnectionTask()
         {
             Connection* conn = new Connection();
             conn->connect(_ip, _port, _username, _password, _dbname);
+            conn->refreshAliveTime(); //刷新一下开始空闲的起始时间
             _connectionQue.push(conn);
             _connectionCnt++;
         }
         _cv.notify_all(); //唤醒一个消费者线程
     }
+}
+
+
+// 扫描超过maxIdleTime时间的空闲连接，进行对于的连接回收
+void ConnectionPool::scannerConnectionTask()
+{
+	for (;;)
+	{
+		// 通过sleep模拟定时效果
+		this_thread::sleep_for(chrono::seconds(_maxIdleTime));
+
+		// 扫描整个队列，释放多余的连接
+		unique_lock<mutex> lock(_queMutex);
+		while (_connectionCnt > _initSize)
+		{
+			Connection *p = _connectionQue.front();
+			if (p->getAliveTime() >= (_maxIdleTime * 1000))
+			{
+				_connectionQue.pop();
+				_connectionCnt--;
+				delete p; // 调用~Connection()释放连接
+			}
+			else
+			{
+				break; // 队头的连接没有超过_maxIdleTime，其它连接肯定没有
+			}
+		}
+	}
 }
