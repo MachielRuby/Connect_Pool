@@ -10,11 +10,13 @@ Connection::Connection()
 }
 
 //释放资源
+// 析构函数，用于释放资源
 Connection::~Connection()
 {
-    if(!_conn)
+    if (_conn) // 确保释放连接资源
     {
         mysql_close(_conn);
+        _conn = nullptr;
     }
 }
 //连接数据库
@@ -30,12 +32,13 @@ bool Connection::connect(string ip,unsigned short port,string user,string pwd,st
 //更新数据库
 bool Connection::update(string sql)
 {
-    if(mysql_query(_conn,sql.c_str()))
-    {
-        LOG("更新失败："+sql);
+    if (mysql_query(_conn, sql.c_str())) {
+        LOG("更新失败：" + sql + " Error: " + mysql_error(_conn));
         return false;
     }
+    return true;
 }
+
 //查询数据库 select
 MYSQL_RES* Connection::query(string sql)
 {

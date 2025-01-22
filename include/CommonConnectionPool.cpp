@@ -9,6 +9,20 @@ ConnectionPool::ConnectionPool()//1 私化构造函数
     if (!loadConfigFile()) {
         LOG("loadConfigFile failed");
     }
+    else
+    {
+        cout << "Loaded Config: "
+     << "_ip=" << _ip
+     << ", _port=" << _port
+     <<",_password = "<<_password
+     << ", _username=" << _username
+     << ", _dbname=" << _dbname
+     << ", _initSize=" << _initSize
+     << ", _maxSize=" << _maxSize << endl;
+
+    }
+    
+    cout<<"初始化连接池"<<endl;
     //创建初始数量的连接
     for (int i = 0; i < _initSize; ++i) {
         Connection* p = new Connection();
@@ -17,7 +31,6 @@ ConnectionPool::ConnectionPool()//1 私化构造函数
         _connectionQue.push(p);
         _connectionCnt++;
     }
-
 	// 启动一个新的线程，作为连接的生产者 linux thread => pthread_create
 	thread produce(std::bind(&ConnectionPool::produceConnectionTask, this));
 	produce.detach();
