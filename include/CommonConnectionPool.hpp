@@ -4,9 +4,11 @@
 #include<string>
 #include<queue>
 #include<iostream>
+#include<thread>
 #include "Connection.hpp"
 using namespace std;
 #include<mutex>
+#include<atomic>
 /*
 实现连接池模块
 */
@@ -17,7 +19,7 @@ class ConnectionPool
     private:
     //加载配置项
     bool loadConfigFile();
-    ConnectionPool(){}//1 私化构造函数
+    ConnectionPool();//1 私化构造函数
     ConnectionPool(const ConnectionPool&) = delete; //3 私化拷贝构造函数
     ConnectionPool& operator=(const ConnectionPool&) = delete; //4 私化赋值运算符
 
@@ -26,6 +28,7 @@ class ConnectionPool
     unsigned short _port;
     string _username;
     string _password;
+    string _dbname;
     int _initSize;
     int _maxSize;
     int _maxIdleTime;
@@ -33,6 +36,12 @@ class ConnectionPool
 
     queue<Connection*>_connectionQue; //存储mysql连接的队列
     mutex _queMutex; //保护队列的互斥锁
+    atomic_int _connectionCnt; //当前连接池中连接的数量
+    public:
+    void print()
+    {
+        cout << _ip << _port << _username << _password << _initSize << _maxSize << _maxIdleTime << _connectionTimeout << endl;
+    }
     
 };
 
