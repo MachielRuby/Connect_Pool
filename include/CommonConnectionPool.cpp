@@ -18,7 +18,9 @@ ConnectionPool::ConnectionPool()//1 私化构造函数
     }
 
     //生产者线程
-    
+    thread produce(std::bind(&ConnectionPool::produceConnectionTask, this));
+
+
 }
 
 ConnectionPool* ConnectionPool::getInstance() //2 提供获取单例对象的接口
@@ -79,3 +81,32 @@ bool ConnectionPool::loadConfigFile()
     return true;
 }
 
+
+
+shared_ptr<Connection>ConnectionPool::getConnection() //从连接池中获取一个可用连接
+{
+
+}
+
+
+void ConnectionPool::produceConnectionTask()
+{
+    for(;;)
+    {
+        std::unique_lock<std::mutex> lock(_queMutex);
+
+        while(!_connectionQue.empty())
+        {
+            _cv.wait(lock); //队列不为空，等待消费
+        }
+        //没有到达上线就可以继续创建
+        if(_connectionCnt<_maxSize)
+        {
+            Connection* conn = new Connection();
+            conn->connect(_ip, _port, _username, _password, _dbname);
+            _connectionQue.push(conn);
+            _connectionCnt++;
+        }
+        cv.notify_all(); //唤醒一个消费者线程
+    }
+}

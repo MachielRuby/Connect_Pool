@@ -20,6 +20,6 @@ int main()
     // }
 
     ConnectionPool *connPool = ConnectionPool::getInstance();
-    connPool->print();
+    getchar();
     return 0;
 }
